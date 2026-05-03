@@ -6,86 +6,6 @@
     <title>VisionTech | HY300 Pro Smart Projector</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'visiontech-projector-v2';
-
-        // უსაფრთხო ავტორიზაციის პროტოკოლი
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth error:", err);
-            }
-        };
-        initAuth();
-
-        window.submitOrder = async (event) => {
-            event.preventDefault();
-            const form = event.target;
-            const btn = form.querySelector('button');
-            
-            if (!auth.currentUser) {
-                alert('გთხოვთ დაელოდოთ სისტემასთან კავშირს...');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = 'იგზავნება...';
-
-            const orderData = {
-                customerName: form[0].value,
-                phone: form[1].value,
-                address: form[2].value,
-                paymentMethod: 'კურიერთან გადახდა',
-                product: 'HY300 Pro',
-                price: '129₾',
-                userId: auth.currentUser.uid, // მომხმარებლის იდენტიფიკატორი უსაფრთხოებისთვის
-                timestamp: serverTimestamp()
-            };
-
-            try {
-                // მონაცემების შენახვა სწორ მისამართზე (Rule 1-ის დაცვით)
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), orderData);
-                
-                const overlay = document.createElement('div');
-                overlay.className = "fixed inset-0 bg-white/95 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-center p-6";
-                overlay.innerHTML = `
-                    <div class="bg-blue-50 p-10 rounded-3xl border border-blue-100 shadow-2xl max-w-sm">
-                        <div class="text-6xl text-green-500 mb-6"><i class="fas fa-check-circle"></i></div>
-                        <h2 class="text-3xl font-black text-slate-900 mb-4">შეკვეთა მიღებულია!</h2>
-                        <p class="text-slate-600 text-lg mb-6">შეკვეთა წარმატებით გაფორმდა, ჩვენი ოპერატორი მალე დაგიკავშირდებათ.</p>
-                        <div class="animate-pulse text-blue-600 font-bold">ბრუნდებით მთავარ გვერდზე...</div>
-                    </div>
-                `;
-                document.body.appendChild(overlay);
-                
-                form.reset();
-
-                setTimeout(() => {
-                    window.location.hash = "home";
-                    window.location.reload();
-                }, 3000);
-            } catch (e) {
-                console.error("Error saving order: ", e);
-                alert('დაფიქსირდა შეცდომა. სცადეთ მოგვიანებით.');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'შეკვეთის გაფორმება';
-            }
-        };
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@100..900&display=swap');
 
@@ -125,22 +45,6 @@
         .card-hover:hover {
             transform: translateY(-5px);
             transition: all 0.3s ease;
-        }
-
-        .video-container {
-            position: relative;
-            padding-bottom: 56.25%;
-            height: 0;
-            overflow: hidden;
-            border-radius: 1.5rem;
-        }
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
         }
 
         .whatsapp-btn {
@@ -354,7 +258,7 @@
 
                 <div class="bg-white text-slate-900 p-10 rounded-3xl shadow-2xl">
                     <h3 class="text-2xl font-bold mb-6 text-center">შეკვეთის ფორმა</h3>
-                    <form onsubmit="window.submitOrder(event)" class="space-y-5">
+                    <form id="whatsappForm" class="space-y-5">
                         <input type="text" required placeholder="თქვენი სახელი და გვარი" class="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <input type="tel" required placeholder="ტელეფონის ნომერი (5XX XX XX XX)" class="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <input type="text" required placeholder="მისამართი" class="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -406,10 +310,12 @@
     </footer>
 
     <script>
+        // მობილური მენიუ
         const menuBtn = document.getElementById('menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');
         menuBtn.onclick = () => mobileMenu.classList.toggle('hidden');
 
+        // ქაუნთდაუნი
         function startCountdown() {
             let time = 9000;
             const display = document.getElementById('countdown');
@@ -423,6 +329,7 @@
         }
         startCountdown();
 
+        // სმუზ სქროლი
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -433,6 +340,41 @@
                 }
             });
         });
+
+        // WhatsApp შეკვეთის გაფორმება
+        document.getElementById('whatsappForm').onsubmit = function(event) {
+            event.preventDefault();
+            
+            const name = this[0].value;
+            const phone = this[1].value;
+            const address = this[2].value;
+
+            const message = `გამარჯობა, მსურს შეკვეთა!%0A%0A` +
+                            `👤 სახელი: ${name}%0A` +
+                            `📞 ტელეფონი: ${phone}%0A` +
+                            `📍 მისამართი: ${address}%0A` +
+                            `📽 პროდუქტი: HY300 Pro%0A` +
+                            `💰 ფასი: 129₾`;
+
+            const whatsappNumber = "995574834651";
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
+
+            const overlay = document.createElement('div');
+            overlay.className = "fixed inset-0 bg-white/95 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-center p-6";
+            overlay.innerHTML = `
+                <div class="bg-blue-50 p-10 rounded-3xl border border-blue-100 shadow-2xl max-w-sm">
+                    <div class="text-6xl text-green-500 mb-6"><i class="fas fa-check-circle"></i></div>
+                    <h2 class="text-3xl font-black text-slate-900 mb-4">გადამისამართება...</h2>
+                    <p class="text-slate-600 text-lg mb-6">შეკვეთის დასასრულებლად გადახვალთ WhatsApp-ში.</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            setTimeout(() => {
+                window.open(whatsappUrl, '_blank');
+                location.reload();
+            }, 1500);
+        };
     </script>
 </body>
 </html>
