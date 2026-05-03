@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionTech | HY300 Pro Smart Projector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'visiontech-projector-v2';
+
+        // უსაფრთხო ავტორიზაციის პროტოკოლი
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth error:", err);
+            }
+        };
+        initAuth();
+
+        window.submitOrder = async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const btn = form.querySelector('button');
+            
+            if (!auth.currentUser) {
+                alert('გთხოვთ დაელოდოთ სისტემასთან კავშირს...');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = 'იგზავნება...';
+
+            const orderData = {
+                customerName: form[0].value,
+                phone: form[1].value,
+                address: form[2].value,
+                paymentMethod: 'კურიერთან გადახდა',
+                product: 'HY300 Pro',
+                price: '129₾',
+                userId: auth.currentUser.uid, // მომხმარებლის იდენტიფიკატორი უსაფრთხოებისთვის
+                timestamp: serverTimestamp()
+            };
+
+            try {
+                // მონაცემების შენახვა სწორ მისამართზე (Rule 1-ის დაცვით)
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), orderData);
+                
+                const overlay = document.createElement('div');
+                overlay.className = "fixed inset-0 bg-white/95 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-center p-6";
+                overlay.innerHTML = `
+                    <div class="bg-blue-50 p-10 rounded-3xl border border-blue-100 shadow-2xl max-w-sm">
+                        <div class="text-6xl text-green-500 mb-6"><i class="fas fa-check-circle"></i></div>
+                        <h2 class="text-3xl font-black text-slate-900 mb-4">შეკვეთა მიღებულია!</h2>
+                        <p class="text-slate-600 text-lg mb-6">შეკვეთა წარმატებით გაფორმდა, ჩვენი ოპერატორი მალე დაგიკავშირდებათ.</p>
+                        <div class="animate-pulse text-blue-600 font-bold">ბრუნდებით მთავარ გვერდზე...</div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                
+                form.reset();
+
+                setTimeout(() => {
+                    window.location.hash = "home";
+                    window.location.reload();
+                }, 3000);
+            } catch (e) {
+                console.error("Error saving order: ", e);
+                alert('დაფიქსირდა შეცდომა. სცადეთ მოგვიანებით.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'შეკვეთის გაფორმება';
+            }
+        };
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@100..900&display=swap');
+
+        :root {
+            --primary: #2563eb;
+            --secondary: #f8fafc;
+            --accent: #3b82f6;
+        }
+
+        body {
+            font-family: 'Noto Sans Georgian', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            background-color: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .hero-clip {
+            clip-path: polygon(0 0, 100% 0, 100% 90%, 0% 100%);
+        }
+
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s ease;
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 1.5rem;
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            z-index: 100;
+            background-color: #25d366;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        .whatsapp-btn:hover {
+            transform: scale(1.1);
+            background-color: #128c7e;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <a href="https://wa.me/995574834651" target="_blank" class="whatsapp-btn shadow-green-500/50">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <header class="sticky-header">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <img src="VT-logo.jpg" alt="VisionTech Logo" class="h-14 w-auto object-contain" onerror="this.src='https://via.placeholder.com/150x50?text=VisionTech'">
+            </div>
+            <div class="hidden md:flex space-x-8 font-medium text-gray-700">
+                <a href="#home" class="hover:text-blue-600 transition">მთავარი</a>
+                <a href="#features" class="hover:text-blue-600 transition">ფუნქციები</a>
+                <a href="#gallery" class="hover:text-blue-600 transition">გალერეა</a>
+                <a href="#specs" class="hover:text-blue-600 transition">მახასიათებლები</a>
+                <a href="#about" class="hover:text-blue-600 transition">ჩვენს შესახებ</a>
+                <a href="#order" class="hover:text-blue-600 transition font-bold text-blue-600">შეკვეთა</a>
+            </div>
+            <div class="md:hidden">
+                <button id="menu-btn" class="text-2xl"><i class="fas fa-bars"></i></button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="hidden bg-white w-full border-t px-6 py-4 space-y-4 shadow-lg md:hidden">
+            <a href="#home" class="block">მთავარი</a>
+            <a href="#features" class="block">ფუნქციები</a>
+            <a href="#gallery" class="block">გალერეა</a>
+            <a href="#specs" class="block">მახასიათებლები</a>
+            <a href="#about" class="block">ჩვენს შესახებ</a>
+            <a href="#order" class="block font-bold">შეკვეთა</a>
+        </div>
+    </header>
+
+    <section id="home" class="relative min-h-screen flex items-center bg-white overflow-hidden hero-clip">
+        <div class="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+            <div>
+                <span class="bg-blue-100 text-blue-600 px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wider">შეზღუდული შეთავაზება</span>
+                <h1 class="text-5xl md:text-7xl font-black text-slate-900 mt-4 leading-tight">
+                    HY300 Pro <span class="text-blue-600">Smart Projector</span>
+                </h1>
+                <p class="text-xl text-gray-600 mt-6 leading-relaxed">
+                    მოიწყე პორტატული კინოთეატრი ნებისმიერ ადგილას
+                </p>
+                <div class="mt-8 flex items-center gap-6">
+                    <div class="flex flex-col">
+                        <span class="text-gray-400 line-through text-xl">200₾</span>
+                        <span class="text-5xl font-black text-blue-600">129₾</span>
+                    </div>
+                    <div class="bg-red-500 text-white px-3 py-1 rounded-lg font-bold animate-bounce text-sm">
+                        -35%
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-4 mt-8">
+                    <a href="#order" class="btn-hover bg-blue-600 text-white px-8 py-4 rounded-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-shopping-cart"></i> იყიდე ახლა
+                    </a>
+                </div>
+            </div>
+            <div class="relative">
+                <img src="dsfs.jpg" alt="HY300 Pro" class="relative z-10 w-full h-auto drop-shadow-2xl rounded-2xl" onerror="this.src='https://via.placeholder.com/600x500?text=HY300+Pro'">
+                <div class="absolute bottom-4 right-4 bg-white p-4 rounded-2xl shadow-xl z-20 border border-blue-50">
+                    <p class="text-sm font-bold text-gray-500 uppercase">აქცია მთავრდება:</p>
+                    <div id="countdown" class="text-blue-600 font-mono font-bold text-xl">02:29:59</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="py-20 bg-white">
+        <div class="container mx-auto px-6">
+            <h2 class="text-center text-4xl font-bold mb-16">ფუნქციები</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-blue-50 p-8 rounded-2xl border border-blue-100 card-hover">
+                    <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+                        <i class="fas fa-tv"></i> გამოსახულება
+                    </h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> HD / Full HD მხარდაჭერა</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> 4K ვიდეო მხარდაჭერა</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Auto Focus სისტემა</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Keystone Correction</li>
+                    </ul>
+                </div>
+                <div class="bg-blue-50 p-8 rounded-2xl border border-blue-100 card-hover">
+                    <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+                        <i class="fab fa-android"></i> სისტემა
+                    </h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Android 11 სისტემა</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> YouTube / Netflix</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Google Play Store</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> ჩაშენებული ბრაუზერი</li>
+                    </ul>
+                </div>
+                <div class="bg-blue-50 p-8 rounded-2xl border border-blue-100 card-hover">
+                    <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+                        <i class="fas fa-wifi"></i> კავშირი
+                    </h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Dual WiFi 6 (2.4/5G)</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Bluetooth 5.0</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> iPhone / Android Cast</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> HDMI & USB პორტები</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="specs" class="py-20 bg-slate-100">
+        <div class="container mx-auto px-6 max-w-4xl">
+            <h2 class="text-3xl font-bold mb-12 text-center text-slate-900">ტექნიკური მონაცემები</h2>
+            <div class="bg-white rounded-3xl overflow-hidden shadow-xl border border-slate-200">
+                <table class="w-full text-left">
+                    <tr class="border-b border-slate-100">
+                        <td class="p-5 font-bold text-slate-600 bg-slate-50 w-1/3">მოდელი</td>
+                        <td class="p-5 text-slate-800">HY300 Pro Smart Projector</td>
+                    </tr>
+                    <tr class="border-b border-slate-100">
+                        <td class="p-5 font-bold text-slate-600 bg-slate-50">ოპერაციული სისტემა</td>
+                        <td class="p-5 text-slate-800">Android 11.0</td>
+                    </tr>
+                    <tr class="border-b border-slate-100">
+                        <td class="p-5 font-bold text-slate-600 bg-slate-50">სიკაშკაშე</td>
+                        <td class="p-5 text-slate-800">200 ANSI Lumens</td>
+                    </tr>
+                    <tr class="border-b border-slate-100">
+                        <td class="p-5 font-bold text-slate-600 bg-slate-50">რეზოლუცია</td>
+                        <td class="p-5 text-slate-800">Native 1280x720P (4K მხარდაჭერა)</td>
+                    </tr>
+                    <tr class="border-b border-slate-100">
+                        <td class="p-5 font-bold text-slate-600 bg-slate-50">კავშირი</td>
+                        <td class="p-5 text-slate-800">WiFi 6, Bluetooth 5.0, HDMI, USB</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="gallery" class="py-20 bg-white overflow-hidden">
+        <div class="container mx-auto px-6">
+            <h2 class="text-3xl font-bold mb-12 text-center">გალერეა</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="group relative rounded-2xl overflow-hidden shadow-lg aspect-square card-hover cursor-pointer">
+                    <img src="gffd.webp" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" alt="პროექტორი 1">
+                    <div class="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="group relative rounded-2xl overflow-hidden shadow-lg aspect-square card-hover cursor-pointer">
+                    <img src="dsfsfsdfs.webp" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" alt="პროექტორი 2">
+                    <div class="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="group relative rounded-2xl overflow-hidden shadow-lg aspect-square card-hover cursor-pointer">
+                    <img src="gfdyty.png" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" alt="პროექტორი 3">
+                    <div class="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="group relative rounded-2xl overflow-hidden shadow-lg aspect-square card-hover cursor-pointer">
+                    <img src="tyrtry.png" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" alt="პროექტორი 4">
+                    <div class="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="order" class="py-20 gradient-bg text-white">
+        <div class="container mx-auto px-6">
+            <div class="grid md:grid-cols-2 gap-16 items-center">
+                <div>
+                    <h2 class="text-4xl font-bold mb-8 text-white tracking-tight">შეუკვეთე დღეს და დაზოგე!</h2>
+                    <div class="space-y-4 mb-10">
+                        <div class="bg-white/10 p-6 rounded-2xl border border-white/20 backdrop-blur-md">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg">სტანდარტული ფასი</span>
+                                <span class="text-2xl line-through opacity-60">200₾</span>
+                            </div>
+                        </div>
+                        <div class="bg-white/20 p-8 rounded-2xl border-2 border-yellow-400 relative">
+                            <span class="absolute -top-3 left-6 bg-yellow-400 text-blue-900 px-4 py-1 rounded-full text-xs font-black uppercase">აქცია</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xl font-bold">სპეციალური ფასი</span>
+                                <span class="text-4xl font-black text-yellow-300">129₾</span>
+                            </div>
+                            <p class="text-sm text-blue-100 mt-4"><i class="fas fa-truck mr-2"></i> უფასო მიწოდება საქართველოს მასშტაბით</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white text-slate-900 p-10 rounded-3xl shadow-2xl">
+                    <h3 class="text-2xl font-bold mb-6 text-center">შეკვეთის ფორმა</h3>
+                    <form onsubmit="window.submitOrder(event)" class="space-y-5">
+                        <input type="text" required placeholder="თქვენი სახელი და გვარი" class="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="tel" required placeholder="ტელეფონის ნომერი (5XX XX XX XX)" class="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" required placeholder="მისამართი" class="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div class="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-sm">
+                            <i class="fas fa-hand-holding-dollar"></i>
+                            <span>გადახდა ხდება კურიერთან</span>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-xl transition duration-300 shadow-lg text-lg">
+                            შეკვეთის გაფორმება
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="py-20 bg-white">
+        <div class="container mx-auto px-6 max-w-4xl text-center">
+            <h2 class="text-3xl font-bold mb-8">VisionTech-ის შესახებ</h2>
+            <div class="w-20 h-1 bg-blue-600 mx-auto mb-8"></div>
+            <p class="text-lg text-gray-700 leading-relaxed">
+                VisionTech არის ინოვაციური პროექტორების იმპორტიორი საქართველოში, რომელიც ორიენტირებულია მომხმარებლის კომფორტზე. პრიორიტეტი ხარისხი და სანდოობაა.
+            </p>
+            <p class="text-lg text-gray-700 mt-4 leading-relaxed">
+                ჩვენს მიერ შემოთავაზებული თითოეული პროდუქტი გადის დეტალურ სისტემურ შემოწმებას, რათა დავრწმუნდეთ, რომ იღებთ საუკეთესოს.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-12">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-star text-yellow-400 text-3xl mb-2"></i>
+                    <span class="font-bold">100% სანდოობა</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-truck-fast text-blue-600 text-3xl mb-2"></i>
+                    <span class="font-bold">მიწოდება 1-2 დღეში</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-slate-900 text-white py-12">
+        <div class="container mx-auto px-6 text-center">
+            <div class="text-2xl font-bold mb-6 text-blue-400">VisionTech</div>
+            <div class="flex justify-center gap-8 mb-8 text-2xl">
+                <a href="https://www.facebook.com/profile.php?id=61587105860244" class="hover:text-blue-400" target="_blank"><i class="fab fa-facebook"></i></a>
+                <a href="https://www.tiktok.com/@visiontechgeo" class="hover:text-blue-400" target="_blank"><i class="fab fa-tiktok"></i></a>
+            </div>
+            <p class="text-gray-500 text-sm">© 2025 VisionTech Georgia. ყველა უფლება დაცულია.</p>
+        </div>
+    </footer>
+
+    <script>
+        const menuBtn = document.getElementById('menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        menuBtn.onclick = () => mobileMenu.classList.toggle('hidden');
+
+        function startCountdown() {
+            let time = 9000;
+            const display = document.getElementById('countdown');
+            setInterval(() => {
+                const hours = Math.floor(time / 3600);
+                const mins = Math.floor((time % 3600) / 60);
+                const secs = time % 60;
+                if (display) display.innerText = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                if (time > 0) time--;
+            }, 1000);
+        }
+        startCountdown();
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
